@@ -4,7 +4,7 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 public class GameQueue {
-    private Queue<Player> players;
+    private LinkedList<Player> players;
     private Lock lock;
     private static final int NUMBER_OF_PLAYERS_PER_TEAM = 2; // Example value, adjust as needed
 
@@ -23,14 +23,18 @@ public class GameQueue {
         }
     }
 
-    public void enqueue(Player player) {
+    public Integer enqueue(Player player, Integer pos) {
         lock.lock();
         try {
             // Use the new method to check if the player is already in the queue
             if (isPlayerInQueue(player.getUsername())) {
                 System.out.println("Player " + player.getUsername() + " is already in the queue.\n");
             } else {
-                players.add(player);
+                if(pos == -1){
+                    players.add(player);
+                    Integer ret = players.indexOf(player);
+                }
+                else players.add(pos, player);
                 System.out.println("Player " + player.getUsername() + " has joined the queue.\n");
     
                 // Check if enough players are in the queue to form a team
@@ -48,5 +52,7 @@ public class GameQueue {
         } finally {
             lock.unlock();
         }
+
+        return pos;
     }
 }

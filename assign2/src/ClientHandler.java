@@ -10,15 +10,15 @@ public class ClientHandler extends Thread {
     private PrintWriter out;
     private CredentialManager credentialManager;
     private GameServer gameServer;
-    private UUID token;
+    private String token;
     private int loginAttempts = 0;
     private boolean isAuthenticated = false;
-    private GameQueue gameQueue; 
+    private GameQueue gameQueue;
+    private int queuePos;
 
-    public ClientHandler(Socket clientSocket, CredentialManager credentialManager, UUID token, GameServer gameServer, GameQueue gameQueue) {
+    public ClientHandler(Socket clientSocket, CredentialManager credentialManager, GameServer gameServer, GameQueue gameQueue) {
         this.clientSocket = clientSocket;
         this.credentialManager = credentialManager;
-        this.token = token;
         this.gameServer = gameServer;
         this.gameQueue = gameQueue;
     }
@@ -38,14 +38,15 @@ public class ClientHandler extends Thread {
                 String username = in.readLine();
                 out.println("Enter password:");
                 String password = in.readLine();
+                token = credentialManager.authenticate(username, password);
 
-                if (credentialManager.authenticate(username, password)) {
+                if (token != null) {
                     out.println("Authentication successful.");
                     isAuthenticated = true;
                     gameServer.addConnectedClient(token, this); // This is the correct place to add the client
                     System.out.println("Authentication successful for " + username);
                     Player player = new Player(username, token);  // Ensure Player class is properly defined
-                    gameQueue.enqueue(player);
+                    queuePos = gameQueue.enqueue(player, queuePos);
                     handleClientSession();
                     break;
                 } else {
@@ -86,11 +87,19 @@ public class ClientHandler extends Thread {
         try {
             if (clientSocket != null && !clientSocket.isClosed()) {
                 clientSocket.close();
-                gameServer.handleDisconnectedClient(token);
+                gameServer.handleDisconnectedClient(token, queuePos);
                 System.out.println("Client [" + token + "] connection closed.");
             }
         } catch (Exception e) {
             System.out.println("Error closing client socket for [" + token + "]: " + e.getMessage());
         }
+    }
+
+    public void setQueuePos(int queuePos) {
+        this.queuePos = queuePos;
+    }
+
+    public int getQueuePos() {
+        return queuePos;
     }
 }

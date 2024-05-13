@@ -2,9 +2,9 @@ import java.util.UUID;
 
 public class Player {
     private String username;
-    private UUID token;
+    private String token;
 
-    public Player(String username, UUID token) {
+    public Player(String username, String token) {
         this.username = username;
         this.token = token;
     }
@@ -13,7 +13,7 @@ public class Player {
         return username;
     }
 
-    public UUID getToken() {
+    public String getToken() {
         return token;
     }
 }

@@ -4,13 +4,15 @@ import java.net.Socket;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.Vector;
 
 public class GameServer {
     private int port;
     private ServerSocket serverSocket;
     private CredentialManager credentialManager;
-    private Map<UUID, ClientHandler> connectedClients;
+    private Map<String, ClientHandler> connectedClients;
     private GameQueue gameQueue;
+    private Map<String, Integer> disconnectedClients;
 
     public GameServer(int port, String credentialFilePath) throws IOException {
         this.port = port;
@@ -18,6 +20,7 @@ public class GameServer {
         this.credentialManager = new CredentialManager(credentialFilePath);
         this.connectedClients = new HashMap<>();
         this.gameQueue = new GameQueue();
+        this.disconnectedClients = new HashMap<>();
     }
 
     public void acceptClients() {
@@ -25,8 +28,7 @@ public class GameServer {
         while (true) {
             try {
                 Socket clientSocket = serverSocket.accept();
-                UUID token = UUID.randomUUID();
-                ClientHandler clientHandler = new ClientHandler(clientSocket, credentialManager, token, this,gameQueue);
+                ClientHandler clientHandler = new ClientHandler(clientSocket, credentialManager, this, gameQueue);
                 new Thread(clientHandler).start();
             } catch (IOException e) {
                 System.out.println("Error accepting client connection.");
@@ -35,14 +37,24 @@ public class GameServer {
         }
     }
 
-    public void addConnectedClient(UUID token, ClientHandler clientHandler) {
+    public void addConnectedClient(String token, ClientHandler clientHandler) {
+        //alterar aqui
+        if(disconnectedClients.containsKey(token)){
+            clientHandler.setQueuePos(disconnectedClients.get(token));
+            disconnectedClients.remove(token);
+            System.out.println("Reconnected client with UUID: " + token + " after successful login.");
+        }
+        else {
+            clientHandler.setQueuePos(-1); // If -1 inserts at end of the queue
+            System.out.println("Added new client with UUID: " + token + " after successful login.");
+        }
         connectedClients.put(token, clientHandler);
-        System.out.println("Added new client with UUID: " + token + " after successful login.");
         printConnectedClients();
     }
 
-    public void handleDisconnectedClient(UUID token) {
+    public void handleDisconnectedClient(String token, Integer pos) {
         connectedClients.remove(token);
+        disconnectedClients.put(token, pos);
         System.out.println("Client disconnected: " + token);
         printConnectedClients();
     }
