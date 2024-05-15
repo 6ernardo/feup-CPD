@@ -5,6 +5,7 @@ import java.util.concurrent.locks.ReentrantLock;
 
 public class GameQueue {
     private LinkedList<Player> players;
+    private LinkedList<Player> disconnectedplayers;
     private Lock lock;
     private static final int NUMBER_OF_PLAYERS_PER_TEAM = 2; // Example value, adjust as needed
 
@@ -31,8 +32,8 @@ public class GameQueue {
                 System.out.println("Player " + player.getUsername() + " is already in the queue.\n");
             } else {
                 if(pos == -1){
+                    System.out.println("here");
                     players.add(player);
-                    Integer ret = players.indexOf(player);
                 }
                 else players.add(pos, player);
                 System.out.println("Player " + player.getUsername() + " has joined the queue.\n");
@@ -52,7 +53,16 @@ public class GameQueue {
         } finally {
             lock.unlock();
         }
+        System.out.println("index" + players.indexOf(player));
+        System.out.println("********Players*************");
+        for (Player element : players) {
+            System.out.println(element.getUsername());
+        }
+        return players.indexOf(player);
+    }
 
-        return pos;
+    public void handleDisconnect(Player player) {
+        players.remove(player);
+        disconnectedplayers.add(player);
     }
 }

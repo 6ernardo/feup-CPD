@@ -41,8 +41,8 @@ public class GameServer {
         //alterar aqui
         if(disconnectedClients.containsKey(token)){
             clientHandler.setQueuePos(disconnectedClients.get(token));
+            System.out.println("Reconnected client with UUID: " + token + " after successful login. Queue position is " + disconnectedClients.get(token));
             disconnectedClients.remove(token);
-            System.out.println("Reconnected client with UUID: " + token + " after successful login.");
         }
         else {
             clientHandler.setQueuePos(-1); // If -1 inserts at end of the queue

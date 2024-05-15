@@ -15,6 +15,7 @@ public class ClientHandler extends Thread {
     private boolean isAuthenticated = false;
     private GameQueue gameQueue;
     private int queuePos;
+    private Player player;
 
     public ClientHandler(Socket clientSocket, CredentialManager credentialManager, GameServer gameServer, GameQueue gameQueue) {
         this.clientSocket = clientSocket;
@@ -45,8 +46,9 @@ public class ClientHandler extends Thread {
                     isAuthenticated = true;
                     gameServer.addConnectedClient(token, this); // This is the correct place to add the client
                     System.out.println("Authentication successful for " + username);
-                    Player player = new Player(username, token);  // Ensure Player class is properly defined
+                    player = new Player(username, token);  // Ensure Player class is properly defined
                     queuePos = gameQueue.enqueue(player, queuePos);
+                    System.out.println("position: " + queuePos);
                     handleClientSession();
                     break;
                 } else {
@@ -88,6 +90,7 @@ public class ClientHandler extends Thread {
             if (clientSocket != null && !clientSocket.isClosed()) {
                 clientSocket.close();
                 gameServer.handleDisconnectedClient(token, queuePos);
+                gameQueue.handleDisconnect(player);
                 System.out.println("Client [" + token + "] connection closed.");
             }
         } catch (Exception e) {

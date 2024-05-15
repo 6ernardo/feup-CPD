@@ -5,7 +5,4 @@ public class GameInstance extends Thread {
         this.team = team;
     }
 
-    public void run() {
-        // Implement game logic here
-    }
 }
