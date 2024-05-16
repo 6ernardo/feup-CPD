@@ -3,8 +3,6 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.UUID;
-import java.util.Vector;
 
 public class GameServer {
     private int port;
@@ -12,7 +10,6 @@ public class GameServer {
     private CredentialManager credentialManager;
     private Map<String, ClientHandler> connectedClients;
     private GameQueue gameQueue;
-    private Map<String, Integer> disconnectedClients;
 
     public GameServer(int port, String credentialFilePath) throws IOException {
         this.port = port;
@@ -20,7 +17,6 @@ public class GameServer {
         this.credentialManager = new CredentialManager(credentialFilePath);
         this.connectedClients = new HashMap<>();
         this.gameQueue = new GameQueue();
-        this.disconnectedClients = new HashMap<>();
     }
 
     public void acceptClients() {
@@ -38,24 +34,12 @@ public class GameServer {
     }
 
     public void addConnectedClient(String token, ClientHandler clientHandler) {
-        //alterar aqui
-        if(disconnectedClients.containsKey(token)){
-            clientHandler.setQueuePos(disconnectedClients.get(token));
-            System.out.println("Reconnected client with UUID: " + token + " after successful login. Queue position is " + disconnectedClients.get(token));
-            disconnectedClients.remove(token);
-        }
-        else {
-            clientHandler.setQueuePos(-1); // If -1 inserts at end of the queue
-            System.out.println("Added new client with UUID: " + token + " after successful login.");
-        }
         connectedClients.put(token, clientHandler);
         printConnectedClients();
     }
 
-    public void handleDisconnectedClient(String token, Integer pos) {
+    public void handleDisconnectedClient(String token) {
         connectedClients.remove(token);
-        disconnectedClients.put(token, pos);
-        System.out.println("Client disconnected: " + token);
         printConnectedClients();
     }
 

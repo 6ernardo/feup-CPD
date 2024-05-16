@@ -10,44 +10,55 @@ public class GameClient {
     private BufferedReader stdIn;
 
     public void startConnection(String ip, int port) throws Exception {
+        System.out.println("Attempting to connect to server at " + ip + ":" + port);
         clientSocket = new Socket(ip, port);
+        System.out.println("Connection established");
         out = new PrintWriter(clientSocket.getOutputStream(), true);
         in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
         stdIn = new BufferedReader(new InputStreamReader(System.in));
 
         // Thread to handle server messages
-        new Thread(() -> {
+        Thread serverHandler = new Thread(() -> {
             try {
                 String fromServer;
                 while ((fromServer = in.readLine()) != null) {
-                    System.out.println("Server: " + fromServer);
-                    if (fromServer.contains("Disconnecting")) {
-                        break;  // Break if server sends a disconnect command
+                    if (fromServer.startsWith("Game is starting") || fromServer.startsWith("Your turn") || fromServer.startsWith("Invalid move") || fromServer.startsWith("Invalid input") || fromServer.startsWith("You win") || fromServer.startsWith("You lose") || fromServer.startsWith("Game draw")) {
+                        System.out.println(fromServer);
+                        if (fromServer.startsWith("Your turn")) {
+                            playTurn();
+                        }
+                        if (fromServer.startsWith("Game over")) {
+                            break;
+                        }
+                    } else {
+                        System.out.println(fromServer);
                     }
                 }
             } catch (Exception e) {
                 System.out.println("Server connection closed unexpectedly.");
             } finally {
                 try {
-                    stopConnection();  // Handle exceptions here
+                    stopConnection();
                 } catch (Exception e) {
                     System.out.println("Error closing connection: " + e.getMessage());
                 }
             }
-        }).start();
+        });
+        serverHandler.start();
 
-        // Handle user input
+        // Allow user to input username and password initially
+        String userInput;
+        while ((userInput = stdIn.readLine()) != null) {
+            out.println(userInput);
+        }
+    }
+
+    private void playTurn() {
         try {
-            String userInput;
-            while (!(userInput = stdIn.readLine()).equalsIgnoreCase("quit")) {
-                out.println(userInput);
-            }
-        } finally {
-            try {
-                stopConnection();  // Handle exceptions here too
-            } catch (Exception e) {
-                System.out.println("Error closing connection: " + e.getMessage());
-            }
+            String userInput = stdIn.readLine();
+            out.println(userInput);
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 

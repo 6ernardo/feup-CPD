@@ -2,7 +2,6 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
-import java.util.UUID;
 
 public class ClientHandler extends Thread {
     private Socket clientSocket;
@@ -14,7 +13,6 @@ public class ClientHandler extends Thread {
     private int loginAttempts = 0;
     private boolean isAuthenticated = false;
     private GameQueue gameQueue;
-    private int queuePos;
     private Player player;
 
     public ClientHandler(Socket clientSocket, CredentialManager credentialManager, GameServer gameServer, GameQueue gameQueue) {
@@ -25,7 +23,7 @@ public class ClientHandler extends Thread {
     }
 
     public Socket getClientSocket() {
-        return this.clientSocket;  
+        return this.clientSocket;
     }
 
     @Override
@@ -44,11 +42,16 @@ public class ClientHandler extends Thread {
                 if (token != null) {
                     out.println("Authentication successful.");
                     isAuthenticated = true;
-                    gameServer.addConnectedClient(token, this); // This is the correct place to add the client
+                    gameServer.addConnectedClient(token, this);
                     System.out.println("Authentication successful for " + username);
-                    player = new Player(username, token);  // Ensure Player class is properly defined
-                    queuePos = gameQueue.enqueue(player, queuePos);
-                    System.out.println("position: " + queuePos);
+                    player = new Player(username, token, clientSocket);  // Pass the clientSocket here
+                    out.println("Choose mode: simple or ranked");
+                    String mode = in.readLine();
+                    if ("ranked".equalsIgnoreCase(mode)) {
+                        gameQueue.enqueueRanked(player);
+                    } else {
+                        gameQueue.enqueueSimple(player);
+                    }
                     handleClientSession();
                     break;
                 } else {
@@ -89,20 +92,12 @@ public class ClientHandler extends Thread {
         try {
             if (clientSocket != null && !clientSocket.isClosed()) {
                 clientSocket.close();
-                gameServer.handleDisconnectedClient(token, queuePos);
+                gameServer.handleDisconnectedClient(token);
                 gameQueue.handleDisconnect(player);
                 System.out.println("Client [" + token + "] connection closed.");
             }
         } catch (Exception e) {
             System.out.println("Error closing client socket for [" + token + "]: " + e.getMessage());
         }
-    }
-
-    public void setQueuePos(int queuePos) {
-        this.queuePos = queuePos;
-    }
-
-    public int getQueuePos() {
-        return queuePos;
     }
 }

@@ -1,68 +1,160 @@
+import java.util.HashMap;
 import java.util.LinkedList;
-import java.util.Queue;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 public class GameQueue {
-    private LinkedList<Player> players;
-    private LinkedList<Player> disconnectedplayers;
+    private LinkedList<Player> simpleQueue;
+    private LinkedList<Player> rankedQueue;
+    private LinkedList<String> disconnectedQueue;
+    private LinkedList<Map<String, Player>> matchedWhileDisconnected;
     private Lock lock;
     private static final int NUMBER_OF_PLAYERS_PER_TEAM = 2; // Example value, adjust as needed
+    private static final int RANK_DIFFERENCE_THRESHOLD = 3; // Maximum rank difference allowed
+    private static final int TIMEOUT = 15;
+    private ScheduledExecutorService scheduler;
 
     public GameQueue() {
-        this.players = new LinkedList<>();
+        this.simpleQueue = new LinkedList<>();
+        this.rankedQueue = new LinkedList<>();
+        this.disconnectedQueue = new LinkedList<>();
+        this.matchedWhileDisconnected = new LinkedList<>();
         this.lock = new ReentrantLock();
+        this.scheduler = Executors.newScheduledThreadPool(1);
     }
 
-    // Method to check if a player is already in the queue
-    public boolean isPlayerInQueue(String username) {
+    public void enqueueSimple(Player player) {
         lock.lock();
         try {
-            return players.stream().anyMatch(p -> p.getUsername().equals(username));
-        } finally {
-            lock.unlock();
-        }
-    }
-
-    public Integer enqueue(Player player, Integer pos) {
-        lock.lock();
-        try {
-            // Use the new method to check if the player is already in the queue
-            if (isPlayerInQueue(player.getUsername())) {
-                System.out.println("Player " + player.getUsername() + " is already in the queue.\n");
-            } else {
-                if(pos == -1){
-                    System.out.println("here");
-                    players.add(player);
-                }
-                else players.add(pos, player);
-                System.out.println("Player " + player.getUsername() + " has joined the queue.\n");
-    
-                // Check if enough players are in the queue to form a team
-                if (players.size() >= NUMBER_OF_PLAYERS_PER_TEAM) {
-                    System.out.println("Enough players to form a team. Starting the game...\n");
-                    // Form a team and start a new game instance
-                    Player[] team = new Player[NUMBER_OF_PLAYERS_PER_TEAM];
-                    for (int i = 0; i < NUMBER_OF_PLAYERS_PER_TEAM; i++) {
-                        team[i] = players.poll();
-                    }
-                    // Start a new game instance with the formed team
-                    new GameInstance(team).start();
+            if (!isPlayerInQueue(simpleQueue, player.getUsername())) {
+                simpleQueue.add(player);
+                System.out.println("Player " + player.getUsername() + " has joined the simple queue.");
+                if (simpleQueue.size() >= NUMBER_OF_PLAYERS_PER_TEAM) {
+                    startGame(simpleQueue);
                 }
             }
         } finally {
             lock.unlock();
         }
-        System.out.println("index" + players.indexOf(player));
-        System.out.println("********Players*************");
-        for (Player element : players) {
-            System.out.println(element.getUsername());
+    }
+
+    public void enqueueRanked(Player player) {
+        System.out.println(player.getUsername() + player.getRank());
+        lock.lock();
+        try {
+            if (disconnectedQueue.contains(player.getToken())) {
+                disconnectedQueue.remove(player.getToken());
+                System.out.println("Player " + player.getUsername() + " has rejoined the ranked queue.");
+                //check if player was matched while disconnected
+                for(Map<String, Player> map : matchedWhileDisconnected) {
+                    if(map.containsKey(player.getToken())) {
+                        List<Player> team = new LinkedList<>();
+                        Player player2 = map.get(player.getToken());
+                        team.add(player2);
+                        team.add(player);
+                        matchedWhileDisconnected.remove(map);
+                        startGame(team);
+                    }
+                }
+            } else {
+                rankedQueue.add(player);
+                System.out.println("Player " + player.getUsername() + " has joined the ranked queue.");
+            }
+            matchRankedPlayers();
+        } finally {
+            lock.unlock();
         }
-        return players.indexOf(player);
+    }
+
+    private void matchRankedPlayers() {
+        if (rankedQueue.size() < NUMBER_OF_PLAYERS_PER_TEAM) {
+            return;
+        }
+
+        for (int i = 0; i < rankedQueue.size() - 1; i++) {
+            for (int j = i + 1; j < rankedQueue.size(); j++) {
+                Player player1 = rankedQueue.get(i);
+                Player player2 = rankedQueue.get(j);
+                if (Math.abs(player1.getRank() - player2.getRank()) <= RANK_DIFFERENCE_THRESHOLD) {
+                    List<Player> team = new LinkedList<>();
+                    team.add(player1);
+                    team.add(player2);
+                    if (disconnectedQueue.contains(player1.getToken())) {
+                        System.out.println("Matchmaking is holding for reconnected players.");
+                        Map<String, Player> aux = new HashMap<>();
+                        aux.put(player1.getToken(), player2);
+                        team.clear();
+                        rankedQueue.remove(player1);
+                        rankedQueue.remove(player2);
+                        matchedWhileDisconnected.add(aux);
+                    } else if (disconnectedQueue.contains(player2.getToken())) {
+                        System.out.println("Matchmaking is holding for reconnected players.");
+                        Map<String, Player> aux = new HashMap<>();
+                        aux.put(player2.getToken(), player1);
+                        team.clear();
+                        rankedQueue.remove(player1);
+                        rankedQueue.remove(player2);
+                        matchedWhileDisconnected.add(aux);
+                    } else if (disconnectedQueue.contains(player1.getToken()) && disconnectedQueue.contains(player2.getToken())) {
+                        //both players disconnected, do not make match
+                        continue;
+                    } else {
+                        rankedQueue.remove(player1);
+                        rankedQueue.remove(player2);
+                        startGame(team);
+                    }
+                    return;
+                }
+            }
+        }
+    }
+
+    private boolean isPlayerInQueue(LinkedList<Player> queue, String username) {
+        return queue.stream().anyMatch(p -> p.getUsername().equals(username));
+    }
+
+    private void startGame(List<Player> team) {
+        Player[] players = new Player[team.size()];
+        team.toArray(players);
+        new GameInstance(players).start();
     }
 
     public void handleDisconnect(Player player) {
-        players.remove(player);
-        disconnectedplayers.add(player);
+        lock.lock();
+        try {
+            if (rankedQueue.contains(player)) {
+                disconnectedQueue.add(player.getToken());
+                System.out.println("Player " + player.getUsername() + " has disconnected and will be given 15 seconds to reconnect.");
+
+                scheduler.schedule(() -> {
+                    lock.lock();
+                    try {
+                        if (disconnectedQueue.contains(player.getToken())) {
+                            rankedQueue.remove(player);
+                            disconnectedQueue.remove(player.getToken());
+                            //check if player was matched while disconnected
+                            for(Map<String, Player> map : matchedWhileDisconnected) {
+                                if(map.containsKey(player.getToken())) {
+                                    matchedWhileDisconnected.remove(map);
+                                }
+                            }
+                            System.out.println("Player " + player.getUsername() + " has been removed from the ranked queue due to disconnection.");
+                        }
+                    } finally {
+                        lock.unlock();
+                    }
+                }, TIMEOUT, TimeUnit.SECONDS);
+            } else {
+                simpleQueue.remove(player);
+                System.out.println("Player " + player.getUsername() + " has been removed from the simple queue.");
+            }
+        } finally {
+            lock.unlock();
+        }
     }
 }
