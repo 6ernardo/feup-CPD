@@ -141,6 +141,8 @@ public class GameQueue {
                             for(Map<String, Player> map : matchedWhileDisconnected) {
                                 if(map.containsKey(player.getToken())) {
                                     matchedWhileDisconnected.remove(map);
+                                    rankedQueue.add(map.get(player.getToken()));
+                                    System.out.println("Matchmaking failed. Returned " + map.get(player.getToken()).getUsername() + " to Queue");
                                 }
                             }
                             System.out.println("Player " + player.getUsername() + " has been removed from the ranked queue due to disconnection.");
