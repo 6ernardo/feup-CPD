@@ -10,12 +10,14 @@ public class GameInstance extends Thread {
     private int currentPlayerIndex;
     private boolean gameRunning;
     private final Lock lock = new ReentrantLock();
+    private boolean ranked;
 
-    public GameInstance(Player[] players) {
+    public GameInstance(Player[] players, boolean ranked) {
         this.players = players;
         this.board = new char[3][3];
         this.currentPlayerIndex = 0;
         this.gameRunning = true;
+        this.ranked = ranked;
         initializeBoard();
     }
 
@@ -54,8 +56,16 @@ public class GameInstance extends Thread {
                                             PrintWriter out = new PrintWriter(player.getSocket().getOutputStream(), true);
                                             if (player == currentPlayer) {
                                                 out.println("Game over. You win!");
+                                                if(this.ranked) {
+                                                    player.setRank(player.getRank() + 1);
+                                                    out.println("You won 1 rank point. Your new score is " + player.getRank() + ".");
+                                                }
                                             } else {
                                                 out.println("Game over. You lose!");
+                                                if(this.ranked) {
+                                                    player.setRank(player.getRank() - 1);
+                                                    out.println("You won 1 rank point. Your new score is " + player.getRank() + ".");
+                                                }
                                             }
                                         }
                                     } else if (isDraw()) {

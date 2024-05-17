@@ -10,7 +10,7 @@ public class Player {
     public Player(String username, String token, Socket socket) {
         this.username = username;
         this.token = token;
-        this.rank = 1; //new Random().nextInt(11); // Assigns a random rank from 0 to 10
+        this.rank = 1;
         this.socket = socket;
     }
 
@@ -24,6 +24,12 @@ public class Player {
 
     public int getRank() {
         return rank;
+    }
+
+    public void setRank(int rank) {
+        if(rank < 0) this.rank = 0;
+        else if(rank > 10) this.rank = 10;
+        else this.rank = rank;
     }
 
     public Socket getSocket() {

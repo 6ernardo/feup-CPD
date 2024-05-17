@@ -35,7 +35,7 @@ public class GameQueue {
                 simpleQueue.add(player);
                 System.out.println("Player " + player.getUsername() + " has joined the simple queue.");
                 if (simpleQueue.size() >= NUMBER_OF_PLAYERS_PER_TEAM) {
-                    startGame(simpleQueue);
+                    startGame(simpleQueue, false);
                 }
             }
         } finally {
@@ -58,7 +58,7 @@ public class GameQueue {
                         team.add(player2);
                         team.add(player);
                         matchedWhileDisconnected.remove(map);
-                        startGame(team);
+                        startGame(team, true);
                     }
                 }
             } else {
@@ -106,7 +106,7 @@ public class GameQueue {
                     } else {
                         rankedQueue.remove(player1);
                         rankedQueue.remove(player2);
-                        startGame(team);
+                        startGame(team, true);
                     }
                     return;
                 }
@@ -118,10 +118,10 @@ public class GameQueue {
         return queue.stream().anyMatch(p -> p.getUsername().equals(username));
     }
 
-    private void startGame(List<Player> team) {
+    private void startGame(List<Player> team, boolean ranked) {
         Player[] players = new Player[team.size()];
         team.toArray(players);
-        new GameInstance(players).start();
+        new GameInstance(players, ranked).start();
     }
 
     public void handleDisconnect(Player player) {
