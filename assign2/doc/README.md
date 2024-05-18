@@ -39,6 +39,7 @@ You will then be prompted to authenticate. If you used the `credentials.txt` fil
 After authentication, you will be asked to choose between `simple` or `ranked` mode, and put in the respective queue.
 
 Once matched, you can play `Tic-Tac-Toe` by inserting the row and column you want to play on (these are 0 indexed).
+Before inputting the play, the player must press enter.
 
 Finally, you can quit anytime by typing `quit`.
 
