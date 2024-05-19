@@ -2,9 +2,6 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -17,7 +14,6 @@ public class GameQueue {
     private static final int NUMBER_OF_PLAYERS_PER_TEAM = 2; // Example value, adjust as needed
     private static final int RANK_DIFFERENCE_THRESHOLD = 3; // Maximum rank difference allowed
     private static final int TIMEOUT = 15;
-    private ScheduledExecutorService scheduler;
 
     public GameQueue() {
         this.simpleQueue = new LinkedList<>();
@@ -25,7 +21,6 @@ public class GameQueue {
         this.disconnectedQueue = new LinkedList<>();
         this.matchedWhileDisconnected = new LinkedList<>();
         this.lock = new ReentrantLock();
-        this.scheduler = Executors.newScheduledThreadPool(1);
     }
 
     public void enqueueSimple(Player player) {
@@ -131,26 +126,32 @@ public class GameQueue {
                 disconnectedQueue.add(player.getToken());
                 System.out.println("Player " + player.getUsername() + " has disconnected and will be given 15 seconds to reconnect.");
 
-                scheduler.schedule(() -> {
-                    lock.lock();
+                // Custom scheduler for timeout
+                new Thread(() -> {
                     try {
-                        if (disconnectedQueue.contains(player.getToken())) {
-                            rankedQueue.remove(player);
-                            disconnectedQueue.remove(player.getToken());
-                            //check if player was matched while disconnected
-                            for(Map<String, Player> map : matchedWhileDisconnected) {
-                                if(map.containsKey(player.getToken())) {
-                                    matchedWhileDisconnected.remove(map);
-                                    rankedQueue.add(map.get(player.getToken()));
-                                    System.out.println("Matchmaking failed. Returned " + map.get(player.getToken()).getUsername() + " to Queue");
+                        Thread.sleep(TIMEOUT * 1000);
+                        lock.lock();
+                        try {
+                            if (disconnectedQueue.contains(player.getToken())) {
+                                rankedQueue.remove(player);
+                                disconnectedQueue.remove(player.getToken());
+                                // Check if player was matched while disconnected
+                                for (Map<String, Player> map : matchedWhileDisconnected) {
+                                    if (map.containsKey(player.getToken())) {
+                                        matchedWhileDisconnected.remove(map);
+                                        rankedQueue.add(map.get(player.getToken()));
+                                        System.out.println("Matchmaking failed. Returned " + map.get(player.getToken()).getUsername() + " to Queue");
+                                    }
                                 }
+                                System.out.println("Player " + player.getUsername() + " has been removed from the ranked queue due to disconnection.");
                             }
-                            System.out.println("Player " + player.getUsername() + " has been removed from the ranked queue due to disconnection.");
+                        } finally {
+                            lock.unlock();
                         }
-                    } finally {
-                        lock.unlock();
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
                     }
-                }, TIMEOUT, TimeUnit.SECONDS);
+                }).start();
             } else {
                 simpleQueue.remove(player);
                 System.out.println("Player " + player.getUsername() + " has been removed from the simple queue.");
