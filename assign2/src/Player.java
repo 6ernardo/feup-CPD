@@ -10,7 +10,7 @@ public class Player {
     public Player(String username, String token, Socket socket) {
         this.username = username;
         this.token = token;
-        this.rank = 1;
+        this.rank = new Random().nextInt(11); // Assigns a random rank from 0 to 10;
         this.socket = socket;
     }
 
