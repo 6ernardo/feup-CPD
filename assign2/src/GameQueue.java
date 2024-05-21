@@ -30,7 +30,10 @@ public class GameQueue {
                 simpleQueue.add(player);
                 System.out.println("Player " + player.getUsername() + " has joined the simple queue.");
                 if (simpleQueue.size() >= NUMBER_OF_PLAYERS_PER_TEAM) {
-                    startGame(simpleQueue, false);
+                    LinkedList<Player> tempQueue = new LinkedList<>();
+                    tempQueue.addAll(simpleQueue);
+                    simpleQueue.clear();
+                    startGame(tempQueue, false);
                 }
             }
         } finally {
