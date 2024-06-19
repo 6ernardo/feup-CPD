@@ -1,10 +1,5 @@
-# CPD Projects
+# FEUP - CPD
 
-CPD Projects of group T01 G14;.
+Project assignments of the Parallel and Distributed Computing course unit at FEUP.
 
-Group members:
-
-1. Ruben Pereira (up202006195@up.pt)
-2. Tiago Pires (up202008790@up.pt)
-3. Bernado Campos ( up202006056@up.pt)
-
+[**CPD Unit Info**](https://sigarra.up.pt/feup/pt/ucurr_geral.ficha_uc_view?pv_ocorrencia_id=520333)
